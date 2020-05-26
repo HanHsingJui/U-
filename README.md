@@ -3,17 +3,20 @@ U校园部分试题答案（目前只测试过 新标准 综合教程3）
 新标准大学英语（第二版）综合3 测试  查看答案
 进入test页面后 等待3秒出现  答 案  按钮
 
-教程:未更新
+教程:安装 油猴  插件，管理插件，实用工具，上传文件。
 
+信息:
+新增一次获取4份试题答案
 
 代码:
 ```
 // ==UserScript==
 // @name         U校园-综合教程3 test
-// @namespace    QQ:2066561288
-// @version      0.1
+// @namespace    http://tampermonkey.net/
+// @version      0.2
 // @description  try to take over the world!
 // @author       define_9247
+// @description  QQ群：464970257
 // @match        *://u.unipus.cn/user/student/homework/index*
 // @match        *://uexercise.unipus.cn/*
 // @grant        none
@@ -22,50 +25,87 @@ U校园部分试题答案（目前只测试过 新标准 综合教程3）
 // ==/UserScript==
 
 //let $ = unsafeWindow.jQuery
-
-
-
 (function() {
+
 	'use strict';
 	window.onload = function(){
-		var n = 0;//第二份试题
+		var n = 0;//第一份试题
+		var lenth = 4;
+
 		var localUrl = window.location.href;
 		var courseId = localUrl.match(/courseId=\d+/g);
 		var school_id = localUrl.match(/school_id=\d+/g);
 		var eccId = localUrl.match(/eccId=\d+/g);
 		var classId = localUrl.match(/classId=\d+/g);
-		//获取list中
-		var stu_id = "";
-		var homework_id = "";
-		var sign = "";
-		var listUrl = "https://u.unipus.cn/user/student/homework/list?length=10&"+school_id+"&"+courseId+"&"+eccId+"&"+classId+"&type=2&state=";
-		$.getJSON(listUrl,function(data){
-			stu_id = data.rs.list[n].stu_id;
-			homework_id = data.rs.list[n].homework_id;
-		});
-		setTimeout(function(){//延时2s
-			//获取forwardUrl
-			var schoolId = school_id[0].replace(/[^0-9]/ig,"");
-			var clsId = classId[0].replace(/[^0-9]/ig,"");
-			var studentId = stu_id;
-			var exerciseId = homework_id;
-			//获取sign
-			var signUrl = "https://u.unipus.cn/user/student/homework/chk?homeworkId="+homework_id+"&"+classId;
+		$.ajaxSettings.async = false;//取消异步执行
+		//函数：
+		function signData(signUrl){
+			var sign = "";
 			$.getJSON(signUrl,function(data){
 				sign = data.rs.sign;
-				var tempUrl = "https://uexercise.unipus.cn/uexercise/api/v1/enter_check_student_exam_detail?plf=0&schoolId="+schoolId+"&clsId="+clsId+"&studentId="+studentId+"&exerciseId="+exerciseId;
-				var lxforwardUrl = encodeURIComponent(tempUrl);
-				var endUrl = tempUrl + "&forwardUrl=" + lxforwardUrl + "&exerciseType=2&sign=" + sign;
-				var btn1 = '<a id="lxx" href="javascript:void(0)")">查看答案</button>';
-				var body = document.getElementById("tbody");
-				var btn = body.getElementsByClassName("last");
-				btn[n].innerHTML += btn1;
-				var endBtn = document.getElementById("lxx");
-				endBtn.onclick = function(){
-					window.open(endUrl);
-				};
-			});
-		},"2000");
+				//alert("getJSON:sign = " + sign);
+			})
+			return sign;
+		}
+		function btnUrl(btnName,anUrl){
+			var endBtn = document.getElementById(btnName);
+			endBtn.onclick = function(){
+				//alert(anUrl);
+				window.open(anUrl);
+			};
+		}
+		//获取list中
+		var stu_id = "";
+		var homework_id = [];
+		var sign = [];//sign
+		var exerciseId = [];//存储作业ID
+		var listUrl = "https://u.unipus.cn/user/student/homework/list?length=10&"+school_id+"&"+courseId+"&"+eccId+"&"+classId+"&type=2&state=";
+		$.getJSON(listUrl,function(data){
+			//console.info(data.rs.list[n].homework_id);
+			//console.info(data.rs.list[n].stu_id);
+			stu_id = data.rs.list[n].stu_id;
+			for(n=0;n<lenth;n++){
+				homework_id[n] = data.rs.list[n].homework_id;
+				//alert("homework_id=" + homework_id[n]);
+			}
+
+			setTimeout(function(){//延时
+				//获取forwardUrl
+				var schoolId = school_id[0].replace(/[^0-9]/ig,"");
+				var clsId = classId[0].replace(/[^0-9]/ig,"");
+				var studentId = stu_id;
+				for(n=0;n<lenth;n++){
+					exerciseId[n] = homework_id[n];
+					//alert("homework_id=" + homework_id[n]);
+					//console.info(schoolId);
+					//console.info(clsId);
+				}
+				//获取sign
+				var tempUrl = [];
+				var lxforwardUrl = [];
+				var endUrl = [];//答案网址
+				for(n=0;n<lenth;n++){
+					//alert("homework_id=" + homework_id[n]);
+					var signUrl = "https://u.unipus.cn/user/student/homework/chk?homeworkId=" + homework_id[n] + "&" + classId;
+					//alert(signUrl);
+					sign[n] = signData(signUrl);
+
+					//alert("sign = " + sign[n]);
+					tempUrl[n] = "https://uexercise.unipus.cn/uexercise/api/v1/enter_check_student_exam_detail?plf=0&schoolId="+schoolId+"&clsId="+clsId+"&studentId="+studentId+"&exerciseId="+exerciseId[n];
+					lxforwardUrl[n] = encodeURIComponent(tempUrl[n]);
+					//alert(sign);
+					endUrl[n] = tempUrl[n] + "&forwardUrl=" + lxforwardUrl[n] + "&exerciseType=2&sign=" + sign[n];
+					//alert(endUrl);
+					var btn1 = '<a id="lxx' + n + '" href="javascript:void(0)")">查看答案</button>';
+					var body = document.getElementById("tbody");
+					var btn = body.getElementsByClassName("last");
+					btn[n].innerHTML += btn1;
+
+					var btnName = "lxx" + n;
+					btnUrl(btnName,endUrl[n]);//添加点击事件
+				}
+			},"2000");
+		});
 	};
 })();
 ```
